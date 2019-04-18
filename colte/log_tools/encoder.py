@@ -4,7 +4,7 @@ import pickle
 import mysql.connector
 import sys
 
-from IMSI_Translate import hash_imsi
+from colte.log_tools.imsi_translate import hash_imsi
 
 
 PASS = None
