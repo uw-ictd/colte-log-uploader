@@ -39,8 +39,8 @@ if __name__ == "__main__":
         _print_usage()
 
     try:
-        f_input = open(sys.argv[1], "r")
-        f_output = open(sys.argv[2], "w")
+        f_input = open(sys.argv[1], "r", encoding='utf-8')
+        f_output = open(sys.argv[2], "w", encoding='utf-8')
         key = sys.argv[3]
     except IndexError:
         _print_usage()
