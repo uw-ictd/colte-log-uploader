@@ -9,37 +9,43 @@ import hashlib
 #    a few more things to notice in the comments among the codes
 
 
-# Is it okay to use sha256?
-# hash imsi
-def hash_imsi(imsi, seed):
-    return hashlib.sha256(imsi + seed).hexdigest()
+def code_imsi(imsi, key):
+    """Code the imsi in an (ideally) irreversable manner"""
+    return hashlib.sha256(imsi + key).hexdigest()
 
-def translate_line(words, seed):
-    result = ""
+
+def _translate_line(words, seed):
+    """Code any IMSI encountered on the line
+
+    @returns coded_result: the line with IMSIs replaced with encoded imsis
+    """
+    coded_result = ""
     # we assume string starts with 46066 and len(str) is 15 is imsi value
     # we assume one space between two fields in log file
     for word in words:
         if ((len(word) == 15) and word.startswith("90154")):
             # hash the imsi value
-            word = hash_imsi(word, seed)
-        result += word + " "
-    return result
+            word = code_imsi(word, seed)
+        coded_result += word + " "
+    return coded_result
 
-def Usage():
+
+def _print_usage():
     sys.exit("Usage: IMSI_Translate.py input_log_file output_log_file Key")
 
+
 if __name__ == "__main__":
-    if (len(sys.argv) != 4):
-        Usage()
+    if len(sys.argv) != 4:
+        _print_usage()
 
     try:
         f_input = open(sys.argv[1], "r")
-        f_output = open(sys.argv[2], "w")  # "w" overwrite a file, change to "a" if append
+        f_output = open(sys.argv[2], "w")
         key = sys.argv[3]
-    except:
-        Usage()
+    except IndexError:
+        _print_usage()
 
     # hash imsi and put result in output file
     for line in f_input:
-        result = translate_line(line.split(), key)
+        result = _translate_line(line.split(), key)
         f_output.write(result + "\n")
