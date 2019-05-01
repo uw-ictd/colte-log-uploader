@@ -4,7 +4,7 @@ import pickle
 import mysql.connector
 import sys
 
-from colte.log_tools.imsi_translate import hash_imsi
+from colte.log_tools.imsi_translate import code_imsi
 
 
 PASS = None
@@ -30,7 +30,7 @@ def get_ip_to_obfuscated_id(connection, seed):
     ip_to_id = {}
     for ip, imsi in ip_to_imsi.items():
         # TODO(matt9j) There is no defined encoding for the imsi in hash_imsi!
-        ip_to_id[ip] = hash_imsi(imsi.encode('utf8'), seed)
+        ip_to_id[ip] = code_imsi(imsi.encode('utf8'), seed)
 
     return ip_to_id
 
