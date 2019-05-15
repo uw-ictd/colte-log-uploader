@@ -10,8 +10,12 @@ import hashlib
 
 
 def code_imsi(imsi, key):
-    """Code the imsi in an (ideally) irreversable manner"""
-    return hashlib.sha256(imsi + key).hexdigest()
+    """Code the imsi in an (ideally) irreversable manner
+
+    @param imsi: A unicode IMSI decimal string
+    @param key: A binary key blob
+    """
+    return hashlib.sha256(imsi.encode('utf8') + key).hexdigest()
 
 
 def _translate_line(words, seed):
