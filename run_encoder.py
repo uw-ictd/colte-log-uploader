@@ -1,5 +1,5 @@
+import argparse
 import getpass
-import sys
 
 import colte.db.reader
 import colte.log_tools.encoder
@@ -11,12 +11,15 @@ DNS_OUT_FILE = "dns_archive"
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("key",
+                        help="The key string to use when encoding data.")
+    args = parser.parse_args()
+
     if not PASS or PASS is None:
         db_password = getpass.getpass(prompt="DB Password:")
     else:
         db_password = PASS
-
-    seed = sys.argv[1]
 
     reader = colte.db.reader.ColteReader(db_host="localhost",
                                          db_user="colte_db",
@@ -25,7 +28,7 @@ if __name__ == "__main__":
                                          )
 
     encoder = colte.log_tools.encoder.StreamingEncoder(reader,
-                                                       seed.encode('utf8'))
+                                                       args.key.encode('utf8'))
     encoder.stream_flowlogs_to_file(FLOWLOG_OUT_FILE)
     encoder.stream_dns_to_file(DNS_OUT_FILE)
     reader.close()
