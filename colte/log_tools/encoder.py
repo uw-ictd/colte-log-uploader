@@ -103,9 +103,10 @@ class StreamingEncoder(object):
 
         return row_fields
 
-    def stream_flowlogs_to_file(self, filename):
+    def stream_flowlogs_to_file(self, filename, compressor=None):
         with open(filename, 'ab') as f:
             print("Beginning Flow Recording")
+
             with self._reader.flow_logs() as flow_logs:
                 for i, row in enumerate(flow_logs):
                     # Log Status
@@ -113,9 +114,18 @@ class StreamingEncoder(object):
                         print("Reached row", i)
 
                     encoded_log = self._encode_flowlog(row)
-                    pickle.dump(encoded_log, f)
+                    out_data = pickle.dumps(encoded_log)
 
-    def stream_dns_to_file(self, filename):
+                    if compressor is not None:
+                        out_data = compressor.compress(out_data)
+
+                    f.write(out_data)
+
+                # Flush the incremental compressor after processing all rows.
+                if compressor is not None:
+                    f.write(compressor.flush())
+
+    def stream_dns_to_file(self, filename, compressor=None):
         with open(filename, 'ab') as f:
             print("Beginning DNS Recording")
             with self._reader.dns_logs() as dns_logs:
@@ -124,5 +134,14 @@ class StreamingEncoder(object):
                     if i % 10000 == 0:
                         print("Reached row", i)
 
-                    encoded_row = self._encode_dns(row)
-                    pickle.dump(encoded_row, f)
+                    encoded_log = self._encode_dns(row)
+                    out_data = pickle.dumps(encoded_log)
+
+                    if compressor is not None:
+                        out_data = compressor.compress(out_data)
+
+                    f.write(out_data)
+
+                # Flush the incremental compressor after processing all rows.
+                if compressor is not None:
+                    f.write(compressor.flush())
