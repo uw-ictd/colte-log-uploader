@@ -105,7 +105,7 @@ class StreamingEncoder(object):
 
     @staticmethod
     def _stream_to_file(filename, compressor, source, encode):
-        with open(filename, 'ab') as f:
+        with open(filename, 'wb') as f:
             print("Beginning", filename)
 
             for i, row in enumerate(source):
