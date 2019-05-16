@@ -1,5 +1,6 @@
 import argparse
 import getpass
+import lzma
 
 import colte.db.reader
 import colte.log_tools.encoder
@@ -12,11 +13,15 @@ DNS_OUT_FILE = "dns_archive"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--compress", action="store_true",
+                        help="Compress the output archive files.")
+
     key_group = parser.add_mutually_exclusive_group(required=True)
     key_group.add_argument("-f", "--keyfile",
                            help="The file holding the encoding key.")
     key_group.add_argument("-k", "--key",
                            help="The key string to use when encoding data.")
+
     args = parser.parse_args()
 
     if not PASS or PASS is None:
@@ -37,6 +42,14 @@ if __name__ == "__main__":
         key = args.key.encode('utf8')
 
     encoder = colte.log_tools.encoder.StreamingEncoder(reader, key)
-    encoder.stream_flowlogs_to_file(FLOWLOG_OUT_FILE)
-    encoder.stream_dns_to_file(DNS_OUT_FILE)
+
+    if args.compress:
+        encoder.stream_flowlogs_to_file(FLOWLOG_OUT_FILE + ".xz",
+                                        compressor=lzma.LZMACompressor())
+        encoder.stream_dns_to_file(DNS_OUT_FILE + ".xz",
+                                   compressor=lzma.LZMACompressor())
+    else:
+        encoder.stream_flowlogs_to_file(FLOWLOG_OUT_FILE, compressor=None)
+        encoder.stream_dns_to_file(DNS_OUT_FILE, compressor=None)
+
     reader.close()
