@@ -16,14 +16,14 @@ class ColteReader(object):
     def close(self):
         self._cnx.close()
 
-    class _FlowLogIterator(object):
-        def __init__(self, connection):
+    class _CursorIterator(object):
+        def __init__(self, connection, query):
             self._connection = connection
+            self._query = query
 
         def __enter__(self):
             self._cursor = self._connection.cursor()
-            query = ("select * from flowlogs;")
-            self._cursor.execute(query)
+            self._cursor.execute(self._query)
             return self
 
         def __exit__(self, exc_type, exc_value, traceback):
@@ -36,48 +36,14 @@ class ColteReader(object):
             return self._cursor.__next__()
 
     def flow_logs(self):
-        return self._FlowLogIterator(self._cnx)
-
-    class _DnsLogIterator(object):
-        def __init__(self, connection):
-            self._connection = connection
-
-        def __enter__(self):
-            self._cursor = self._connection.cursor()
-            query = ("select time, srcIp, dstIp, transportProtocol, srcPort, dstPort, opcode, resultcode, host, ip_addresses, ttls, idx from dnsResponses, answers where dnsResponses.answer=answers.idx;")
-            self._cursor.execute(query)
-            return self
-
-        def __exit__(self, exc_type, exc_value, traceback):
-            self._cursor.close()
-
-        def __iter__(self):
-            return self
-
-        def __next__(self):
-            return self._cursor.__next__()
+        return self._CursorIterator(connection=self._cnx,
+                                    query="select * from flowlogs;")
 
     def dns_logs(self):
-        return self._DnsLogIterator(self._cnx)
+        query_string = "select time, srcIp, dstIp, transportProtocol, srcPort, dstPort, opcode, resultcode, host, ip_addresses, ttls, idx from dnsResponses, answers where dnsResponses.answer=answers.idx;"
 
-    class _IpToIMSIIterator(object):
-        def __init__(self, connection):
-            self._connection = connection
-
-        def __enter__(self):
-            self._cursor = self._connection.cursor()
-            query = ("select * from static_ips")
-            self._cursor.execute(query)
-            return self
-
-        def __exit__(self, exc_type, exc_value, traceback):
-            self._cursor.close()
-
-        def __iter__(self):
-            return self
-
-        def __next__(self):
-            return self._cursor.__next__()
+        return self._CursorIterator(connection=self._cnx, query=query_string)
 
     def ip_imsi_table(self):
-        return self._IpToIMSIIterator(self._cnx)
+        return self._CursorIterator(connection=self._cnx,
+                                    query="select * from static_ips")
