@@ -55,6 +55,8 @@ class StreamingEncoder(object):
         row_fields["bytes_a_to_b"] = flowlog[7]
         row_fields["bytes_b_to_a"] = flowlog[8]
 
+        return row_fields
+
     def _encode_dns(self, raw_log):
         # Convert to ipaddress types
         if len(raw_log[1]) == 4:
