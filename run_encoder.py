@@ -1,3 +1,8 @@
+"""Command line wrapper around the log_tools.encoder.
+
+`python run_encoder.py --help` for usage information.
+"""
+
 import argparse
 import getpass
 import lzma
