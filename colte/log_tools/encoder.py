@@ -128,11 +128,17 @@ class StreamingEncoder(object):
                 f.write(compressor.flush())
 
     def stream_flowlogs_to_file(self, filename, compressor=None):
-        with self._reader.flow_logs() as flow_logs:
+        with self._reader.stage_flow_logs() as flow_logs:
             self._stream_to_file(filename, compressor, flow_logs,
                                  self._encode_flowlog)
 
     def stream_dns_to_file(self, filename, compressor=None):
-        with self._reader.dns_logs() as dns_logs:
+        with self._reader.stage_dns_logs() as dns_logs:
             self._stream_to_file(filename, compressor, dns_logs,
                                  self._encode_dns)
+
+    def purge_staged_dns_logs(self):
+        self._reader.purge_staged_dns_logs()
+
+    def purge_staged_flow_logs(self):
+        self._reader.purge_staged_flow_logs()

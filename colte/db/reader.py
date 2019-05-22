@@ -64,8 +64,8 @@ class ColteReader(object):
         self._cnx.start_transaction(isolation_level="SERIALIZABLE")
         try:
             cursor = self._cnx.cursor()
-            cursor.execute("drop table flowlogs_staging; "
-                           "create table flowlogs_staging "
+            cursor.execute("drop table if exists flowStaging; "
+                           "create table flowStaging "
                            "as (select * from flowlogs);")
             self._cnx.commit()
         except Exception as e:
@@ -75,22 +75,23 @@ class ColteReader(object):
         return self._CursorIterator(connection=self._cnx,
                                     query="select * from flowlogs_staging;")
 
-    def purge_currently_staged_flowlogs(self):
+    def purge_staged_flowlogs(self):
+        """Delete any flow entries from the main log which have been staged."""
         self._cnx.start_transaction(isolation_level="SERIALIZABLE")
         try:
             cursor = self._cnx.cursor()
             cursor.execute("DELETE FROM flowlogs "
                            "WHERE EXISTS ("
-                           "SELECT * FROM flowlogs, flowlogs_staging as staging"
-                           "WHERE flowlogs.intervalStart = staging.intervalStart "
-                           "AND flowlogs.intervalStop = staging.intervalStop "
-                           "AND flowlogs.addressA = staging.addressA "
-                           "AND flowlogs.addressB = staging.addressB "
-                           "AND flowlogs.transportProtocol = staging.transportProtocol "
-                           "AND flowlogs.portA = staging.portA "
-                           "AND flowlogs.portB = staging.portB "
-                           "AND flowlogs.bytesAtoB = staging.bytesAtoB "
-                           "AND flowlogs.bytesBtoA = staging.bytesBtoA);")
+                           "SELECT * FROM flowlogs, flowStaging "
+                           "WHERE flowlogs.intervalStart = flowStaging.intervalStart "
+                           "AND flowlogs.intervalStop = flowStaging.intervalStop "
+                           "AND flowlogs.addressA = flowStaging.addressA "
+                           "AND flowlogs.addressB = flowStaging.addressB "
+                           "AND flowlogs.transportProtocol = flowStaging.transportProtocol "
+                           "AND flowlogs.portA = flowStaging.portA "
+                           "AND flowlogs.portB = flowStaging.portB "
+                           "AND flowlogs.bytesAtoB = flowStaging.bytesAtoB "
+                           "AND flowlogs.bytesBtoA = flowStaging.bytesBtoA);")
             self._cnx.commit()
         except Exception as e:
             self._cnx.rollback()
@@ -100,6 +101,59 @@ class ColteReader(object):
         """Provide an iterator over the main flow log."""
         return self._CursorIterator(connection=self._cnx,
                                     query="select * from flowlogs;")
+
+    def stage_dns_logs(self):
+        """Stage DNS log entries from the main log in a temporary table.
+
+        This will clear and overwrite any currently staged logs with new logs
+        from the main store.
+
+        Returns an iterator over the newly staged logs.
+        """
+        self._cnx.start_transaction(isolation_level="SERIALIZABLE")
+        try:
+            cursor = self._cnx.cursor()
+            cursor.execute("drop table if exists dnsStaging;"
+                           "create table dnsStaging "
+                           "as (select time, srcIp, dstIp, transportProtocol, "
+                           "srcPort, dstPort, opcode, resultcode, host, "
+                           "ip_addresses, ttls, idx "
+                           "from dnsResponses, answers "
+                           "where dnsResponses.answer=answers.idx);")
+
+            self._cnx.commit()
+        except Exception as e:
+            self._cnx.rollback()
+            raise e
+
+        return self._CursorIterator(connection=self._cnx,
+                                    query="select * from dnsStaging;")
+
+    def purge_staged_dns_logs(self):
+        """Delete any DNS entries from the main log which have been staged."""
+        self._cnx.start_transaction(isolation_level="SERIALIZABLE")
+        try:
+            cursor = self._cnx.cursor()
+            cursor.execute("DELETE FROM dnsResponses "
+                           "WHERE EXISTS ( "
+                           "SELECT time, srcIp, dstIp, transportProtocol, "
+                           "srcPort, dstPort, opcode, resultcode, host, "
+                           "ip_addresses, ttls, idx "
+                           "FROM dnsStaging "
+                           "WHERE dnsResponses.answer = dnsStaging.idx AND "
+                           "dnsResponses.time = dnsStaging.time AND "
+                           "dnsResponses.srcIp = dnsStaging.srcIp AND "
+                           "dnsResponses.dstIp = dnsStaging.dstIp AND "
+                           "dnsResponses.transportProtocol = dnsStaging.transportProtocol AND "
+                           "dnsResponses.srcPort = dnsStaging.srcPort AND "
+                           "dnsResponses.dstPort = dnsStaging.dstPort AND "
+                           "dnsResponses.opcode = dnsStaging.opcode AND "
+                           "dnsResponses.resultcode = dnsStaging.resultcode)"
+                           )
+            self._cnx.commit()
+        except Exception as e:
+            self._cnx.rollback()
+            raise e
 
     def dns_logs(self):
         """Provide an iterator over the main DNS log."""
