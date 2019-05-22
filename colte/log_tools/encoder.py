@@ -5,11 +5,17 @@ from colte.log_tools.imsi_translate import code_imsi
 
 
 class StreamingEncoder(object):
+    """Encodes CoLTE data for archival and export.
+
+    Provides methods for reading data and streaming it to both compressed and
+    uncompressed archive files.
+    """
     def __init__(self, reader, seed):
         self._reader = reader
         self._coded_ids = self._build_ip_to_coded_id(seed)
 
     def _build_ip_to_imsis(self):
+        """Build and return a dictionary mapping IP addresses to IMSIs."""
         imsis = {}
         with self._reader.ip_imsi_table() as imsi_table:
             for imsi, ip_string in imsi_table:
@@ -18,6 +24,7 @@ class StreamingEncoder(object):
         return imsis
 
     def _build_ip_to_coded_id(self, seed):
+        """Build and return a dict mapping IP addresses to anonymized ID."""
         ip_to_imsi = self._build_ip_to_imsis()
         ip_to_id = {}
         for ip, imsi in ip_to_imsi.items():
@@ -26,6 +33,7 @@ class StreamingEncoder(object):
         return ip_to_id
 
     def _encode_flowlog(self, flowlog):
+        """Transcribe a flowlog tuple into a dict for output and archival."""
         row_fields = dict()
         row_fields["start_time"] = flowlog[0]
         row_fields["end_time"] = flowlog[1]
@@ -58,6 +66,7 @@ class StreamingEncoder(object):
         return row_fields
 
     def _encode_dns(self, raw_log):
+        """Transcribe a dns tuple into a dict for output and archival."""
         # Convert to ipaddress types
         if len(raw_log[1]) == 4:
             src_addr = ipaddress.IPv4Address(bytes(raw_log[1]))
@@ -107,6 +116,7 @@ class StreamingEncoder(object):
 
     @staticmethod
     def _stream_to_file(filename, compressor, source, encode):
+        """Stream an iterator source through an encoder to the log file."""
         with open(filename, 'wb') as f:
             print("Beginning", filename)
 
@@ -128,17 +138,24 @@ class StreamingEncoder(object):
                 f.write(compressor.flush())
 
     def stream_flowlogs_to_file(self, filename, compressor=None):
+        """Stream flow logs to an output file."""
         with self._reader.stage_flow_logs() as flow_logs:
             self._stream_to_file(filename, compressor, flow_logs,
                                  self._encode_flowlog)
 
     def stream_dns_to_file(self, filename, compressor=None):
+        """Stream DNS logs to an output file."""
         with self._reader.stage_dns_logs() as dns_logs:
             self._stream_to_file(filename, compressor, dns_logs,
                                  self._encode_dns)
 
+    # TODO(matt9j) The concept of staging doesn't exist at this higher API
+    #  level. Consider how to best communicate the intention and encourage
+    #  appropriate API use.
     def purge_staged_dns_logs(self):
+        """Purge staged DNS logs from the main log."""
         self._reader.purge_staged_dns_logs()
 
     def purge_staged_flow_logs(self):
+        """Purge staged flow logs from the main log."""
         self._reader.purge_staged_flow_logs()
