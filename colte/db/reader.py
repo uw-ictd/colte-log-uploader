@@ -5,7 +5,20 @@ import mysql.connector
 
 
 class ColteReader(object):
+    """Abstracts the CoLTE data store for higher level programs.
+
+    On initialization it takes parameters to establish a connection with the
+    underlying database.
+
+    This class is NOT THREAD SAFE.
+    """
+
     def __init__(self, db_host, db_user, db_name, db_password):
+        """Initializes the ColteReader for use.
+
+        After initialization the ColteReader must later be closed with the
+        close() method.
+        """
         self._cnx = mysql.connector.connect(
             host=db_host,
             user=db_user,
@@ -14,6 +27,11 @@ class ColteReader(object):
         )
 
     def close(self):
+        """Closes the reader and releases any underlying resources.
+
+        After close() has been called no further method calls may be made to
+        the object.
+        """
         self._cnx.close()
 
     class _CursorIterator(object):
@@ -36,6 +54,13 @@ class ColteReader(object):
             return self._cursor.__next__()
 
     def stage_flow_logs(self):
+        """Stage flow log entries from the main log in a temporary table.
+
+        This will clear and overwrite any currently staged logs with new logs
+        from the main log store.
+
+        Returns an iterator over the newly staged logs.
+        """
         self._cnx.start_transaction(isolation_level="SERIALIZABLE")
         try:
             cursor = self._cnx.cursor()
@@ -72,14 +97,17 @@ class ColteReader(object):
             raise e
 
     def flow_logs(self):
+        """Provide an iterator over the main flow log."""
         return self._CursorIterator(connection=self._cnx,
                                     query="select * from flowlogs;")
 
     def dns_logs(self):
+        """Provide an iterator over the main DNS log."""
         query_string = "select time, srcIp, dstIp, transportProtocol, srcPort, dstPort, opcode, resultcode, host, ip_addresses, ttls, idx from dnsResponses, answers where dnsResponses.answer=answers.idx;"
 
         return self._CursorIterator(connection=self._cnx, query=query_string)
 
     def ip_imsi_table(self):
+        """Provide an iterator over the IMSI<->IP mapping."""
         return self._CursorIterator(connection=self._cnx,
                                     query="select * from static_ips")
