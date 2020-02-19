@@ -73,7 +73,7 @@ class ColteReader(object):
             raise e
 
         return self._CursorIterator(connection=self._cnx,
-                                    query="select * from flowlogs_staging;")
+                                    query="select * from flowStaging;")
 
     def purge_staged_flowlogs(self):
         """Delete any flow entries from the main log which have been staged."""
