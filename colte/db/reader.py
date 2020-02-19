@@ -24,6 +24,7 @@ class ColteReader(object):
             user=db_user,
             database=db_name,
             passwd=db_password,
+            autocommit=False,
         )
 
     def close(self):
@@ -41,11 +42,13 @@ class ColteReader(object):
 
         def __enter__(self):
             self._cursor = self._connection.cursor()
+            self._connection.start_transaction(isolation_level="SERIALIZABLE")
             self._cursor.execute(self._query)
             return self
 
         def __exit__(self, exc_type, exc_value, traceback):
             self._cursor.close()
+            self._connection.commit()
 
         def __iter__(self):
             return self
@@ -61,15 +64,14 @@ class ColteReader(object):
 
         Returns an iterator over the newly staged logs.
         """
-        self._cnx.start_transaction(isolation_level="SERIALIZABLE")
         try:
             cursor = self._cnx.cursor()
             cursor.execute("drop table if exists flowStaging;")
             cursor.execute("create table flowStaging "
                            "as (select * from flowlogs);")
-            self._cnx.commit()
         except Exception as e:
-            self._cnx.rollback()
+            # Normally there would be rollback logic here, but MySQL
+            # does not support rollback from table operations!
             raise e
 
         return self._CursorIterator(connection=self._cnx,
@@ -110,7 +112,6 @@ class ColteReader(object):
 
         Returns an iterator over the newly staged logs.
         """
-        self._cnx.start_transaction(isolation_level="SERIALIZABLE")
         try:
             cursor = self._cnx.cursor()
             res = cursor.execute("drop table if exists dnsStaging;")
@@ -121,7 +122,8 @@ class ColteReader(object):
                                  "from dnsResponses, answers "
                                  "where dnsResponses.answer=answers.idx);")
         except Exception as e:
-            self._cnx.rollback()
+            # Normally there would be rollback logic here, but MySQL
+            # does not support rollback from table operations!
             raise e
 
         return self._CursorIterator(connection=self._cnx,
