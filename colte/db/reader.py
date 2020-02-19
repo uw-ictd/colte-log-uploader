@@ -64,8 +64,8 @@ class ColteReader(object):
         self._cnx.start_transaction(isolation_level="SERIALIZABLE")
         try:
             cursor = self._cnx.cursor()
-            cursor.execute("drop table if exists flowStaging; "
-                           "create table flowStaging "
+            cursor.execute("drop table if exists flowStaging;")
+            cursor.execute("create table flowStaging "
                            "as (select * from flowlogs);")
             self._cnx.commit()
         except Exception as e:
@@ -113,15 +113,13 @@ class ColteReader(object):
         self._cnx.start_transaction(isolation_level="SERIALIZABLE")
         try:
             cursor = self._cnx.cursor()
-            cursor.execute("drop table if exists dnsStaging;"
-                           "create table dnsStaging "
-                           "as (select time, srcIp, dstIp, transportProtocol, "
-                           "srcPort, dstPort, opcode, resultcode, host, "
-                           "ip_addresses, ttls, idx "
-                           "from dnsResponses, answers "
-                           "where dnsResponses.answer=answers.idx);")
-
-            self._cnx.commit()
+            res = cursor.execute("drop table if exists dnsStaging;")
+            res = cursor.execute("create table dnsStaging "
+                                 "as (select time, srcIp, dstIp, transportProtocol, "
+                                 "srcPort, dstPort, opcode, resultcode, host, "
+                                 "ip_addresses, ttls, idx "
+                                 "from dnsResponses, answers "
+                                 "where dnsResponses.answer=answers.idx);")
         except Exception as e:
             self._cnx.rollback()
             raise e
